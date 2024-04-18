@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Grumpy Voting App</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #ffffff; /* Changed to white background */
+            color: black;
+            padding: 10px;
+            margin: 0;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            background-color: #222222; /* dark grey background for the header */
+            padding: 10px;
+            color: #fff; /* White text color */
+        }
+      
+
+
+      
+        .logo {
+            width: 120px; /* Size of the logo */
+            height: 120px;
+            margin-right: 2px;
+        }
+        .title {
+            font-size: 20px;
+            line-height: 1.2; /* For stacking words */
+            text-align: left; /* Align text to the left */
+        }
+        .hidden {
+            display: none;
+        }
+        #loginForm, #opsPanel {
+            background: #FFFFFF;
+            padding: 10px;
+            border: 2px solid black;
+        }
+        .button {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-right: 20px;
+        }
+        .button:hover {
+            opacity: 0.9;
+        }
+        .yes { background-color: #4CAF50; } /* Green for yes */
+        .no { background-color: #f44336; } /* Red for no */
+        .maybe { background-color: #ffeb3b; color: black; } /* Yellow for maybe */
+        #questions {
+            border: 2px solid black;
+            padding: 10px;
+            background: #FFFFFF;
+            margin-top: 10px;
+        }
+      footer {
+          width: 100%;
+          padding: 20px;
+          background-color: #222222; /* Change this color to match your design */
+          text-align: center; /* Centers the content horizontally */
+          border-top: 2px solid #000; /* Optional: Adds a top border to the footer */
+      }
+
+    </style>
+</head>
+<body>
+<header>
+    <img src="https://yellow-blank-weasel-435.mypinata.cloud/ipfs/QmRyJVL2SyNCrsm6dKYkhYAqqTKPrCoKf5XKg46NDRVPq6" class="logo" alt="Grumpy Logo">
+    <div class="title">GRUMPY<br>VOTING<br>APP</div>
+  
+  <div id="latestQuestionDisplay" style="background-color: #f0f0f0; padding: 20px; text-align: center; font-size: 24px; color: black; margin-top: 20px; margin-left: 125px; border: 2px solid #000; border-radius: 10px; box-shadow: 0 0 0 2px #4CAF50; display: flex; justify-content: center; align-items: center; position: relative;">
+      <span id="latestQuestion">No questions yet...</span>
+      <div style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); display: flex; align-items: center; color: #4CAF50; font-size: 16px;">
+          <div style="margin-right: 10px;">Live Voting</div>
+          <span style="background-color: #4CAF50; width: 10px; height: 10px; border-radius: 50%;"></span>
+      </div>
+  </div>
+
+
+
+
+
+
+
+
+</header>
+
+<div id="loginForm">
+    <label for="usernameInput" style="color: black;">Username:</label>
+    <input type="text" id="usernameInput" placeholder="Enter your username">
+    <button class="button" onclick="login()">Login</button>
+</div>
+
+<div id="opsPanel" class="hidden">
+    <input type="text" id="questionInput" placeholder="Enter a question">
+    <button class="button" onclick="submitQuestion()">Submit Question</button>
+</div>
+
+<div id="questions"></div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+    const socket = io();
+
+    let currentUser = '';
+    let currentMode = '';
+
+    function login() {
+        const username = document.getElementById('usernameInput').value;
+        currentUser = username;
+        socket.emit('registerUser', username);
+        displayAppropriateUI(username);
+    }
+
+    function submitQuestion() {
+        const input = document.getElementById('questionInput');
+        socket.emit('newQuestion', input.value.trim());
+        input.value = '';
+    }
+
+    function toggleMode() {
+        socket.emit('toggleMode', currentUser);
+    }
+
+    socket.on('modeUpdate', (mode) => {
+        currentMode = mode;
+        displayAppropriateUI(currentUser);
+    });
+
+  socket.on('update', (data) => {
+      const questionsDiv = document.getElementById('questions');
+      const latestQuestionDisplay = document.getElementById('latestQuestion');
+      questionsDiv.innerHTML = '';
+      if (data.questions.length > 0) {
+          latestQuestionDisplay.textContent = data.questions[data.questions.length - 1].text; // Display the latest question
+      }
+
+      data.questions.slice().reverse().forEach(q => {
+          const div = document.createElement('div');
+          div.innerHTML = `<strong>${q.text}</strong><br>`;
+
+          const voterDiv = document.createElement('div');
+          voterDiv.className = 'voters';
+
+          ['yes', 'no', 'maybe'].forEach(voteType => {
+              const button = document.createElement('button');
+              button.className = 'button ' + voteType;
+              button.innerHTML = `${voteType.toUpperCase()}: ${data.votes[q.id][voteType].length}`;
+              button.onclick = () => {
+                  socket.emit('vote', { questionId: q.id, vote: voteType, username: currentUser });
+              };
+              div.appendChild(button);
+
+              data.votes[q.id][voteType].forEach(name => {
+                  const nameSpan = document.createElement('span');
+                  nameSpan.className = 'voter-name';
+                  nameSpan.style.marginRight = '10px'; // Space between names
+
+                  // Create the circle span and add it to the nameSpan
+                  const circleSpan = document.createElement('span');
+                  circleSpan.className = 'vote-circle ' + voteType + '-circle';
+                  circleSpan.style.display = 'inline-block';
+                  circleSpan.style.width = '10px';
+                  circleSpan.style.height = '10px';
+                  circleSpan.style.borderRadius = '50%';
+                  circleSpan.style.backgroundColor = getCircleColor(voteType); // Function to set color based on vote
+                  nameSpan.appendChild(circleSpan);
+
+                  // Create a text node for the name to prevent innerHTML from overwriting
+                  const textNode = document.createTextNode(' ' + name);
+                  nameSpan.appendChild(textNode); // Add text node to the nameSpan
+
+                  voterDiv.appendChild(nameSpan);
+              });
+          });
+
+          div.appendChild(voterDiv);
+          questionsDiv.appendChild(div);
+      });
+  });
+
+  // Helper function to determine circle color based on the vote type
+  function getCircleColor(voteType) {
+      switch (voteType) {
+          case 'yes': return '#4CAF50'; // green
+          case 'no': return '#f44336'; // red
+          case 'maybe': return '#ffeb3b'; // yellow
+          default: return '#ccc'; // default color if none matched
+      }
+  }
+
+
+
+  function displayAppropriateUI(username) {
+      const loginForm = document.getElementById('loginForm');
+      const opsPanel = document.getElementById('opsPanel');
+     // const toggleModeBtn = document.getElementById('toggleModeBtn');
+      loginForm.classList.add('hidden');
+
+      // Convert username to lowercase before comparison
+      const normalizedUsername = username.toLowerCase();
+      if (normalizedUsername === 'pedro' || normalizedUsername === 'dino') {
+          opsPanel.classList.remove('hidden');
+          //toggleModeBtn.style.display = 'block'; // Show toggle button for Pedro and Dino
+          currentMode = 'Ops'; // Set Ops mode as default for Pedro and Dino
+         // toggleModeBtn.textContent = "Switch to Angel Mode"; // Update the button text accordingly
+      } else {
+          opsPanel.classList.add('hidden');
+         // toggleModeBtn.style.display = 'none'; // Hide toggle button for Angels
+          currentMode = 'Angel'; // Set Angel mode as default for others
+        //  toggleModeBtn.textContent = "Switch to Ops Mode"; // Update the button text accordingly
+      }
+  }
+
+
+</script>
+  
+  <footer>
+      <img src="https://assets-global.website-files.com/6185a0e32368ee16f38a8614/61a2c2f514defd7c2921cc3f_Daedalus-logo-p-500.png" alt="Daedalus Logo" style="width: 200px; height: auto; display: block; margin: 0 auto;">
+  </footer>
+  
+</body>
+</html>
