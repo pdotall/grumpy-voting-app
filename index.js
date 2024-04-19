@@ -1,18 +1,23 @@
 const express = require('express');
 const http = require('http');
 const socketIo = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
 const io = socketIo(server, {
     cors: {
-        origin: "*",
+        origin: "*",  // Adjust as necessary for production
         methods: ["GET", "POST"]
     }
 });
 
+// Serve static files (CSS, JS, images)
+app.use(express.static('public'));
+
+// Route to serve the index.html file
 app.get('/', (req, res) => {
-  res.sendFile(__dirname + '/index.html');
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 let questions = [];
@@ -43,21 +48,19 @@ io.on('connection', (socket) => {
 
     socket.on('vote', ({ questionId, vote, username }) => {
         if (userModes[username] === 'Angel') {
-            // Remove previous votes from all categories
             ['yes', 'no', 'maybe'].forEach(voteType => {
                 const index = votes[questionId][voteType].indexOf(username);
-                if (index !== -1) votes[questionId][voteType].splice(index, 1);
+                if (index !== -1) {
+                    votes[questionId][voteType].splice(index, 1);
+                }
             });
-
-            // Add new vote
             votes[questionId][vote].push(username);
-            io.emit('update', { questions, votes });  // Update all clients with new vote status
+            io.emit('update', { questions, votes });
         }
     });
 
     socket.on('disconnect', () => {
         console.log(`${socket.username} disconnected`);
-        // Clean up user data if necessary
     });
 });
 
