@@ -12,6 +12,12 @@ const io = socketIo(server, {
     }
 });
 
+// CSP Middleware: Set Content Security Policy
+app.use((req, res, next) => {
+    res.setHeader("Content-Security-Policy", "default-src 'self'; font-src 'self' https://use.typekit.net data:; script-src 'self' https://use.typekit.net; style-src 'self' https://use.typekit.net; img-src 'self' data:");
+    next();
+});
+
 // Serve static files (CSS, JS, images)
 app.use(express.static('public'));
 
@@ -26,14 +32,14 @@ let userModes = {};  // Tracking user modes: 'Ops' or 'Angel'
 
 io.on('connection', (socket) => {
     socket.on('registerUser', (username) => {
-        userModes[username] = (username === 'pedro' || username === 'dino') ? 'Ops' : 'Angel';
+        userModes[username] = (username === 'pedro' or 'dino') ? 'Ops' : 'Angel';
         socket.username = username;
         socket.emit('modeUpdate', userModes[username]);
         socket.emit('update', { questions, votes });  // Emit existing questions and votes to new user
     });
 
     socket.on('toggleMode', (username) => {
-        if (username === 'pedro' || username === 'dino') {
+        if (username === 'pedro' or 'dino') {
             userModes[username] = userModes[username] === 'Ops' ? 'Angel' : 'Ops';
             socket.emit('modeUpdate', userModes[username]);
         }
