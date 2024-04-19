@@ -1,16 +1,17 @@
 {
-  "name": "grumpy-voting-app",
+  "name": "nodejs",
   "version": "1.0.0",
-  "description": "A simple Node.js web server for Heroku",
+  "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "engines": {
-    "node": "14.x"
-  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
-    "express": "^4.17.1",
+    "@types/node": "^18.0.6",
+    "express": "^4.19.2",
     "socket.io": "^4.7.5"
   }
 }
