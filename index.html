@@ -113,12 +113,16 @@
     let currentUser = '';
     let currentMode = '';
 
-    function login() {
-        const username = document.getElementById('usernameInput').value;
-        currentUser = username;
-        socket.emit('registerUser', username);
-        displayAppropriateUI(username);
-    }
+  function login() {
+      const username = document.getElementById('usernameInput').value;
+      if (typeof currentUser !== 'undefined') {
+          currentUser = username;
+          socket.emit('registerUser', username);
+          displayAppropriateUI(username);
+      } else {
+          console.error('currentUser is not defined');
+      }
+  }
 
     function submitQuestion() {
         const input = document.getElementById('questionInput');
